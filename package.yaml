@@ -1,0 +1,46 @@
+name:                project-template
+version:             0.1.0.0
+github:              "githubuser/project-template"
+license:             WTFPL
+author:              "Author name here"
+maintainer:          "example@example.com"
+copyright:           "2022 Author name here"
+
+extra-source-files:
+- README.md
+
+description: Please see the README on GitHub at <https://github.com/githubuser/project-template#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- text
+
+library:
+  source-dirs: src
+  ghc-options:
+  - -Wall
+  - -Werror
+
+executables:
+  project-template-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -Wall
+    - -Werror
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - project-template
+
+tests:
+  project-template-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - project-template
