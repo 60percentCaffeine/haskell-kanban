@@ -5,7 +5,13 @@ module TaskBot
 import Graphics.Gloss
 
 -- TODO: struct
-type Card = String
+data CardPriority = Highest | High | Medium | Low | Lowest
+
+data Card = Card {
+  title :: String,
+  worker :: Int,
+  priority :: CardPriority
+}
 
 rectangle :: Float -> Float -> Picture
 rectangle w h
@@ -17,8 +23,8 @@ rectangle w h
         y2      = posY + h
    in   Polygon [(x1, y1), (x1, y2), (x2, y2), (x2, y1)]
 
-card :: String -> Picture
-card title = Pictures [(Color white $ rectangle 300 100), (translate 10 60 $ Color black $ Scale 0.2 0.2 $ Text title)]
+card :: Card -> Picture
+card crd = Pictures [(Color white $ rectangle 300 100), (translate 10 60 $ Color black $ Scale 0.2 0.2 $ Text (title $ crd))]
 
 cardList :: Float -> [Card] -> [Picture]
 cardList _ [] = []
@@ -38,4 +44,4 @@ run = display window background drawing
       window = InWindow "Kanban Board" (1200, 700) (0, 0) 
       background = white 
       --drawing = Polygon [(0,0), (0,160), (80,160), (80,0)]
-      drawing = Pictures $ columnList 0 [["Test Card 1", "Test Card 2"], ["Test Card 3", "Test Card 4"], ["Test Card 5"]]
+      drawing = Pictures $ columnList 0 [[(Card "Test Card 1" 0 Medium), (Card "Test Card 2" 0 Medium)], [(Card "Test Card 3" 0 Medium), (Card "Test Card 4" 0 Medium)], [(Card "Test Card 5" 0 Medium)]]

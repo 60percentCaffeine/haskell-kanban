@@ -19,7 +19,7 @@ dependencies:
 library:
   source-dirs: src
   ghc-options:
-  - -Wall
+      #  - -Wall # TODO
   - -Werror
 
 executables:
@@ -27,7 +27,7 @@ executables:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
-    - -Wall
+        #    - -Wall
     - -Werror
     - -threaded
     - -rtsopts
