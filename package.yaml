@@ -1,4 +1,4 @@
-name:                project-template
+name:                haskell-kanban
 version:             0.1.0.0
 github:              "githubuser/project-template"
 license:             WTFPL
@@ -13,6 +13,7 @@ description: Please see the README on GitHub at <https://github.com/githubuser/p
 
 dependencies:
 - base >= 4.7 && < 5
+- gloss
 - text
 
 library:
@@ -22,7 +23,7 @@ library:
   - -Werror
 
 executables:
-  project-template-exe:
+  haskell-kanban-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -32,10 +33,10 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - project-template
+    - haskell-kanban
 
 tests:
-  project-template-test:
+  haskell-kanban-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -43,4 +44,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - project-template
+    - haskell-kanban

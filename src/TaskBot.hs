@@ -1,57 +1,37 @@
 module TaskBot
-  ( runBot
+  ( run
   ) where
 
-import Consts
-import System.IO
+import Graphics.Gloss
 
-type Task = String
-type UserName = String
+-- TODO: struct
+type Card = String
 
--- | Run task bot.
--- Commands:
--- /list -- show task list
--- /complete -- complete the last task
--- /exit -- stop bot
--- Any other input is considered as new task.
-runBot :: IO ()
-runBot = do
-  -- disable buffering for stdout
-  hSetBuffering stdout NoBuffering
-  putStrLn namePrompt
-  name <- getLine
-  go name []
-  where
-    -- Helper function to interact with user and update tasks list
-    go :: UserName -> [Task] -> IO ()
-    go name taskList = do
-      putStr $ name ++ "> "
-      str <- getLine
-      if (str == "/exit")
-        then putStrLn goodbyeMsg
-        else do
-          -- process input unless it is an "/exit" command
-          let (output, newTaskList) = processCommand str taskList
-          putStrLn (botPrompt ++ output)
-          go name newTaskList
+rectangle :: Float -> Float -> Picture
+rectangle w h
+ = let  posX    = 0
+        posY    = 0 -- -h/2
+        x1      = posX
+        x2      = posX + w
+        y1      = posY
+        y2      = posY + h
+   in   Polygon [(x1, y1), (x1, y2), (x2, y2), (x2, y1)]
 
--- | Process user input. Returns output string to be printed by bot and
--- updated list of tasks in a tuple.
-processCommand :: String -> [Task] -> (String, [Task])
-processCommand cmd prevTaskList = case cmd of
-  "/list" -> cmdList prevTaskList
-  "/complete" -> cmdComplete prevTaskList
-  _ -> addTask cmd prevTaskList
+card :: String -> Picture
+card title = Pictures [(Color white $ rectangle 300 100), (translate 10 60 $ Color black $ Scale 0.2 0.2 $ Text title)]
 
--- | Command to show tasks list.
-cmdList :: [Task] -> (String, [Task])
-cmdList tasks = (show tasks, tasks)
+cardList :: Float -> [Card] -> [Picture]
+cardList _ [] = []
+cardList offY (a: az) = ((translate 10 offY $ card a): (cardList (offY - 110) az))
 
--- | Command to complete the last task.
-cmdComplete :: [Task] -> (String, [Task])
-cmdComplete [] = (noTasksMsg, [])
-cmdComplete (_:xs) = (completeMsg, xs)
+column :: Float -> [Card] -> Picture
+column h cards = Pictures ((rectangle 320 h) : (cardList (h - 110) cards))
 
--- | Add new task to tasks list.
-addTask :: String -> [Task] -> (String, [Task])
-addTask task l = (newTaskMsg, task:l)
+run :: IO ()
+run = display window background drawing
+  -- $ translate (-600) 350 $ scale 700 700 drawing
+    where
+      window = InWindow "Kanban Board" (1200, 700) (0, 0) 
+      background = white 
+      --drawing = Polygon [(0,0), (0,160), (80,160), (80,0)]
+      drawing = column 680 ["Test Card 1", "Test Card 2"]
