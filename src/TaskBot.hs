@@ -13,6 +13,9 @@ data Card = Card {
   priority :: CardPriority
 }
 
+users :: [String]
+users = ["Undefined", "Bob", "Alice", "John", "Valera"]
+
 rectangle :: Float -> Float -> Picture
 rectangle w h
  = let  posX    = 0
