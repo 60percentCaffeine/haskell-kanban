@@ -45,10 +45,13 @@ columnList :: Float -> [[Card]] -> [Picture]
 columnList _ [] = []
 columnList offX (cards: cards_z) = ((translate offX 0 $ column 680 cards) : (columnList (offX + 330) cards_z))
 
+-- if the currently edited card is Nothing, draw the board
+-- else draw the card editing interface
 drawApp :: AppState -> Picture
 drawApp (AppState x _) = translate (-590) (-340) $ Pictures $ columnList 0 x
 
 -- Handle events.
+-- Handle mouse clicks on cards (start editing the card)
 handleEvent :: Event -> AppState -> AppState
 handleEvent _ state = state
 
