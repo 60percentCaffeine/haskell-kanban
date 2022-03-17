@@ -3,14 +3,18 @@ module TaskBot
   ) where
 
 import Graphics.Gloss
+import Graphics.Gloss.Interface.Pure.Game
 
 -- TODO: struct
 data CardPriority = Highest | High | Medium | Low | Lowest
-
 data Card = Card {
   title :: String,
   worker :: Int,
   priority :: CardPriority
+}
+
+data AppState = AppState {
+  cards :: [[Card]]
 }
 
 users :: [String]
@@ -40,11 +44,22 @@ columnList :: Float -> [[Card]] -> [Picture]
 columnList _ [] = []
 columnList offX (cards: cards_z) = ((translate offX 0 $ column 680 cards) : (columnList (offX + 330) cards_z))
 
+drawApp :: AppState -> Picture
+drawApp (AppState x) = translate (-590) (-340) $ Pictures $ columnList 0 x
+
+-- Handle events.
+handleEvent :: Event -> AppState -> AppState
+handleEvent _ state = state
+
+-- simulation step
+updateApp :: Float -> AppState -> AppState
+updateApp _ x = x
+
 run :: IO ()
-run = display window background drawing
+run = play window background 1 defaultState drawApp handleEvent updateApp
   -- $ translate (-600) 350 $ scale 700 700 drawing
     where
       window = InWindow "Kanban Board" (1200, 700) (0, 0) 
       background = white 
       --drawing = Polygon [(0,0), (0,160), (80,160), (80,0)]
-      drawing = Pictures $ columnList 0 [[(Card "Test Card 1" 0 Medium), (Card "Test Card 2" 0 Medium)], [(Card "Test Card 3" 0 Medium), (Card "Test Card 4" 0 Medium)], [(Card "Test Card 5" 0 Medium)]]
+      defaultState = AppState [[(Card "Test Card 1" 0 Medium), (Card "Test Card 2" 0 Medium)], [(Card "Test Card 3" 0 Medium), (Card "Test Card 4" 0 Medium)], [(Card "Test Card 5" 0 Medium)]]
