@@ -143,7 +143,7 @@ handleEvent event state
     , AppState cards Nothing (Just moving)    <- state
     = AppState cards Nothing $ Just $ translate x y $ moving
 -}
-    -- Start moving a card on left clicking a card
+    -- Start moving a card on left clicking it
     | EventKey (MouseButton LeftButton) Down _ (x, y) <- event
     , AppState cards Nothing Nothing Nothing _ _ _ <- state
     , Just newState <- (startMovingCard state x y) -- this feels illegal
