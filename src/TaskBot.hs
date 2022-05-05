@@ -89,8 +89,9 @@ drawApp state
     translate 0 (-50) $ Scale 0.2 0.2 $ Text "Person:",
     translate 100 (-50) $ Scale 0.2 0.2 $ Text (users !! (worker $ movingCard edi)),
 
-    -- save message
+    -- save/remove card message
     translate 0 (-100) $ Scale 0.2 0.2 $ Text "Press Q to save & exit",
+    translate 0 (-150) $ Scale 0.2 0.2 $ Text "Press D to remove the card",
 
     -- draw debug info
     translate (-20) (-640) $ Scale 0.2 0.2 $ Color red $ Text ("Mouse:(" ++ (show x) ++ "," ++ (show y) ++ "), edit field:" ++ (debugField $ detectEditField x y))
@@ -199,10 +200,19 @@ handleEvent event state
     , ((isNothing $ editing state) && (isNothing $ moving state))
     = newState
 
+    --
+    -- Editing view
+    --
+
     -- Stop editing on Q
     | EventKey (Char 'q') Down _ _ <- event
     , AppState cards (EditScreen edi) a b c <- state
     = state {cards = (addCardTo cards (movingPrevCol edi) (Just $ movingPrevPos edi) (movingCard edi)), screen = None}
+
+    -- Remove card on D
+    | EventKey (Char 'd') Down _ _ <- event
+    , AppState cards (EditScreen edi) a b c <- state
+    = state {screen = None}
 
     -- Handle mouse clicks in editing view
     | EventKey (MouseButton LeftButton) Up _ (x, y) <- event
@@ -219,6 +229,10 @@ handleEvent event state
     | EventMotion (x, y) <- event
     , EditScreen mcard <- (screen state)
     = state {_mouse = (x, y)}
+
+    --
+    -- Text view
+    --
 
     -- Handle key presses in Text view
     | EventKey (Char c) Down _ _ <- event
