@@ -5,70 +5,12 @@ module TaskBot
 import Graphics.Gloss
 import Graphics.Gloss.Interface.Pure.Game
 import Consts
-
--- TODO: struct
-data CardPriority = Highest | High | Medium | Low | Lowest
-data Card = Card {
-  title :: String,
-  worker :: Int,
-  priority :: CardPriority
-}
-
-instance Eq CardPriority where
-  (==) Highest Highest = True
-  (==) High High = True
-  (==) Medium Medium = True
-  (==) Low Low = True
-  (==) Lowest Lowest = True
-  (==) _ _ = False
-
-instance Eq Card where
-  Card x1 y1 z1 == Card x2 y2 z2 = (x1 == x2) && (y1 == y2) && (z1 == z2)
-
-type Column = Maybe Int
-
-data AppState = AppState {
-  cards :: [[Card]],
-  editing :: Maybe Card,
-  moving :: Maybe Card,
-  movingPos :: Maybe (Float, Float),
-  _mouse :: (Float, Float),
-  _column :: Column,
-  _card :: Maybe Card
-}
-
-delete :: Eq a => a -> [a] -> [a]
-delete el [] = []
-delete el (x: xz) | (x == el) = xz
-  | otherwise = (x: (delete el xz))
+import Types
+import Funcs
 
 -- it might be better to have a dedicated User type
 users :: [String]
 users = ["Undefined", "Bob", "Alice", "John", "Valera"]
-
-rectangle :: Float -> Float -> Picture
-rectangle w h
- = let  posX    = 0
-        posY    = 0 -- -h/2
-        x1      = posX
-        x2      = posX + w
-        y1      = posY
-        y2      = posY + h
-   in   Polygon [(x1, y1), (x1, y2), (x2, y2), (x2, y1)]
-
-card :: Card -> Picture
-card crd = Pictures [(Color white $ rectangle 300 100), (translate 10 60 $ Color black $ Scale 0.2 0.2 $ Text (title $ crd))]
-
-cardList :: Float -> [Card] -> [Picture]
-cardList _ [] = []
-cardList offY (a: az) = ((translate 10 offY $ card a): (cardList (offY - 110) az))
-
-column :: Float -> [Card] -> Picture
-column h cards = Pictures ((rectangle 320 h) : (cardList (h - 110) cards))
-
-columnList :: Float -> [[Card]] -> [Picture]
-columnList _ [] = []
-columnList offX (cards: cards_z) = ((translate offX 0 $ column 680 cards) : (columnList (offX + 330) cards_z))
 
 debugColumn :: Column -> String
 debugColumn Nothing = "Nothing"
@@ -78,60 +20,144 @@ debugCard :: Maybe Card -> String
 debugCard Nothing = "Nothing"
 debugCard (Just x) = title x
 
-debugInfo :: (Float, Float) -> Column -> Maybe Card -> Maybe Card -> Picture
-debugInfo (x,y) col card moving = Text ("mouse coords: (" ++ (show x) ++ "," ++ (show y) ++ "), column:" ++ (debugColumn col) ++ ", card:" ++ (debugCard card) ++ ", moving:" ++ (debugCard moving))
+debugMovingCard :: Maybe MovingCard -> String
+debugMovingCard Nothing = "Nothing"
+debugMovingCard (Just x) = title $ movingCard x
+
+debugInfo :: (Float, Float) -> Column -> Maybe Card -> Maybe MovingCard -> Picture
+debugInfo (x,y) col card moving = Text ("mouse coords: (" ++ (show x) ++ "," ++ (show y) ++ "), column:" ++ (debugColumn col) ++ ", card:" ++ (debugCard card) ++ ", moving:" ++ (debugMovingCard moving))
+
+data EditField = NameField | WorkerField
+
+debugField :: Maybe EditField -> String
+debugField Nothing = "Nothing"
+debugField (Just NameField) = "NameField"
+debugField (Just WorkerField) = "WorkerField"
+
+detectEditField :: Float -> Float -> Maybe EditField
+detectEditField x y
+  | ((x > (-580)) && (y < 325) && (y > 290)) = Just NameField
+  | ((x > (-580)) && (y < 280) && (y > 240)) = Just WorkerField
+  | otherwise = Nothing
+
+updateNameField :: AppState -> String -> AppState
+updateNameField state str
+  | EditScreen mcard <- screen state = let
+      card = movingCard mcard
+      card2 = card {title = str}
+      mcard2 = mcard {movingCard = card2}
+    in state {screen = (EditScreen mcard2)}
+  | otherwise = state -- something went horribly wrong
+
+updateWorkerField :: AppState -> [String] -> Int -> AppState
+updateWorkerField state _ idx
+  | EditScreen mcard <- screen state = let
+      card = movingCard mcard
+      card2 = card {worker = idx}
+      mcard2 = mcard {movingCard = card2}
+    in state {screen = (EditScreen mcard2)}
+
+  | otherwise = state
+
+handleEditClick :: AppState -> Float -> Float -> AppState
+handleEditClick state x y
+  | Just NameField <- field
+  , Just mcard <- editing state
+  = startTextScreen state (title $ movingCard mcard) updateNameField
+
+  | Just WorkerField <- field
+  , Just mcard <- editing state
+  , card <- movingCard mcard
+  = startSelectScreen state users (worker card) updateWorkerField
+
+  | Nothing <- field = state
+
+  where field = detectEditField x y
 
 -- if the currently edited card is Nothing, draw the board
 -- else draw the card editing interface
 drawApp :: AppState -> Picture
-drawApp (AppState x _ cardBeingMoved movedCoords mouseCoords mouseColumn mouseCard) = translate (-590) (-340) $ Pictures $ (columnList 0 x) ++ [(translate (0) (0) $ Color red $ Scale 0.2 0.2 $ debugInfo mouseCoords mouseColumn mouseCard cardBeingMoved)]
+drawApp state
+  | (Just edi) <- editing state
+  = translate (-580) (300)
+  $ Pictures [
+    -- draw name
+    Scale 0.2 0.2 $ Text "Name:",
+    translate 100 0 $ Scale 0.2 0.2 $ Text $ title $ movingCard edi,
 
--- first argument is the column number/counter
-findColumnByCoords :: Int -> Float -> Float -> Column
-findColumnByCoords 3 _ _ = Nothing
-findColumnByCoords col x y
-  | ((y > 340) || (y < -340)) = Nothing
-  | ((x > -590) && (x < -270)) = Just col
-  | otherwise = findColumnByCoords (col + 1) (x - 330) y
+    -- draw worker
+    translate 0 (-50) $ Scale 0.2 0.2 $ Text "Person:",
+    translate 100 (-50) $ Scale 0.2 0.2 $ Text (users !! (worker $ movingCard edi)),
 
-findCardByCoords :: Column -> Maybe [Card] -> Float -> Float -> Maybe Card
-findCardByCoords Nothing _ _ _ = Nothing
-findCardByCoords _ Nothing _ _ = Nothing
-findCardByCoords (Just coln) (Just []) _ _ = Nothing
-findCardByCoords (Just coln) (Just (a: az)) x y
-  | ((y2 < 330) && (y2 > 230)) = (Just a)
-  | otherwise = findCardByCoords (Just coln) (Just az) x (y + 110)
+    -- save message
+    translate 0 (-100) $ Scale 0.2 0.2 $ Text "Press Q to save & exit",
+
+    -- draw debug info
+    translate (-20) (-640) $ Scale 0.2 0.2 $ Color red $ Text ("Mouse:(" ++ (show x) ++ "," ++ (show y) ++ "), edit field:" ++ (debugField $ detectEditField x y))
+  ]
+--  = Scale 0.2 0.2 $ Text "Editing a card, Q to save & exit"
+
+  | TextScreen str _ <- screen state
+  = translate (-580) (300)
+  $ Pictures [
+    Scale 0.2 0.2 $ Text "Enter the new value:",
+    translate 400 0 $ Scale 0.2 0.2 $ Text str,
+    translate 0 (-50) $ Scale 0.2 0.2 $ Text "Delete to remove last letter, right arrow to submit"
+  ]
+
+  | SelectScreen list idx _ <- screen state
+  = translate (-580) (300)
+  $ Pictures [
+    Scale 0.2 0.2 $ Text "Pick the new value:",
+    translate 400 0 $ Scale 0.2 0.2 $ Text (list !! idx),
+    translate 0 (-50) $ Scale 0.2 0.2 $ Text "Use left/right arrows to pick, down arrow to submit"
+  ]
+  
+  | otherwise
+  = translate (-590) (-340)
+  $ Pictures
+  $ (columnList 0 (cards state))
+    ++ [(translate (0) (0)
+      $ Color red
+      $ Scale 0.2 0.2
+      $ debugInfo (_mouse state) (_column state) (_card state) (moving state))]
+
   where
-    x2 = x - (fromIntegral $ 330*coln)
-    y2 = y
-
-indexColumn :: Column -> [[Card]] -> Maybe [Card]
-indexColumn Nothing _ = Nothing
-indexColumn (Just x) y = Just (y !! x)
-
-removeCard :: Int -> [[Card]] -> Card -> [[Card]]
-removeCard _ [] _ = []
-removeCard 0 (x: xz) card = ((delete card x): xz)
-removeCard n (x: xz) card = (x: (removeCard (n-1) xz card))
-
-takeCardAt :: [[Card]] -> Float -> Float -> Maybe ([[Card]], Card)
-takeCardAt cards x y
-    | (Just justCard) <- card
-    , (Just justColn) <- coln
-    = Just $ ((removeCard justColn cards justCard), justCard)
-
-    | otherwise = Nothing
-
-    where
-      coln = findColumnByCoords 0 x y
-      card = findCardByCoords coln (indexColumn coln cards) x y
+    x = fst $ _mouse state
+    y = snd $ _mouse state
 
 startMovingCard :: AppState -> Float -> Float -> Maybe AppState
-startMovingCard (AppState cards Nothing Nothing Nothing a b c) x y
-    | Just (newCards, card) <- takeCardAt cards x y
-      = Just $ AppState newCards Nothing (Just card) (Just (x,y)) a b c
+startMovingCard state x y
+    | Just (newCards, card) <- takeCardAt (cards state) x y
+    , Just (coln) <- (_column state)
+    , Just cardn <- findCardIndexByCoords (Just coln) (Just $ (cards state) !! coln) x y 0
+    , ((isNothing $ editing state) && (isNothing $ moving state))
+      = Just $ state {cards = newCards, screen = (MoveScreen $ MovingCard card (x,y) coln cardn)}
 
     | otherwise = Nothing
+
+startEditingCard :: AppState -> Float -> Float -> Maybe AppState
+startEditingCard state x y
+    | Just (newCards, card) <- takeCardAt (cards state) x y
+    , Just coln <- (_column state)
+    , Just cardn <- findCardIndexByCoords (Just coln) (Just $ (cards state) !! coln) x y 0
+    , ((isNothing $ editing state) && (isNothing $ editing state))
+      = Just $ state {cards = newCards, screen = (EditScreen $ MovingCard card (x,y) coln cardn)}
+
+    | otherwise = Nothing
+
+startCreatingCard :: AppState -> Int -> Float -> Float -> AppState
+startCreatingCard state coln x y = state {screen = (EditScreen $ MovingCard newcard (x,y) coln (length $ (cards state !! coln)))}
+  where newcard = Card "New Card" 0 Medium
+
+-- starts a text screen
+-- the textscreenfunc modifies the state BEFORE the text screen started
+-- so it still has the previous screen
+startTextScreen :: AppState -> String -> TextScreenFunc -> AppState
+startTextScreen state str f = state {screen = TextScreen str (f state)}
+
+startSelectScreen :: AppState -> [String] -> Int -> SelectScreenFunc -> AppState
+startSelectScreen state list idx f = state {screen = SelectScreen list idx (f state)}
 
 -- Handle events.
 -- Handle mouse clicks on cards (start editing the card)
@@ -143,17 +169,97 @@ handleEvent event state
     , AppState cards Nothing (Just moving)    <- state
     = AppState cards Nothing $ Just $ translate x y $ moving
 -}
+    --
+    -- Default view
+    --
+
+    -- Add a new card on clicking an empty space in the column
+    | EventKey (MouseButton LeftButton) Down _ (x, y) <- event
+    , Just coln <- (findColumnByCoords 0 x y)
+    , Nothing <- (findCardIndexByCoords (Just coln) (Just $ (cards state) !! coln) x y 0)
+    , None <- screen state
+    = startCreatingCard state coln x y
+
     -- Start moving a card on left clicking it
     | EventKey (MouseButton LeftButton) Down _ (x, y) <- event
-    , AppState cards Nothing Nothing Nothing _ _ _ <- state
     , Just newState <- (startMovingCard state x y) -- this feels illegal
+    , ((isNothing $ editing state) && (isNothing $ moving state))
     = newState
 
+    -- Stop moving the card
     | EventKey (MouseButton LeftButton) Up _ (x, y) <- event
-    , AppState cards Nothing (Just moving) (Just (x2,y2)) a b c <- state
-    = AppState cards Nothing Nothing Nothing a b c
+    , AppState cards (MoveScreen mov) a b c <- state
+    , Just coln <- (findColumnByCoords 0 x y)
+    , cardn <- (findCardIndexByCoords (Just coln) (Just $ cards !! coln) x y 0)
+    = state {cards = (addCardTo cards coln cardn (movingCard mov)), screen = None}
+
+    -- Start editing a card on right clicking it
+    | EventKey (MouseButton RightButton) Down _ (x, y) <- event
+    , Just newState <- (startEditingCard state x y)
+    , ((isNothing $ editing state) && (isNothing $ moving state))
+    = newState
+
+    -- Stop editing on Q
+    | EventKey (Char 'q') Down _ _ <- event
+    , AppState cards (EditScreen edi) a b c <- state
+    = state {cards = (addCardTo cards (movingPrevCol edi) (Just $ movingPrevPos edi) (movingCard edi)), screen = None}
+
+    -- Handle mouse clicks in editing view
+    | EventKey (MouseButton LeftButton) Up _ (x, y) <- event
+    , EditScreen _ <- screen state = handleEditClick state x y
+
+    -- Update debug info in Kanban view
+    | EventMotion (x, y) <- event
+    , ((isNothing $ editing state) && (isNothing $ moving state))
+    = let coln = findColumnByCoords 0 x y
+          col = indexColumn coln (cards state)
+      in state {_mouse = (x,y), _column = coln, _card = (findCardByCoords coln col x y)}
+
+    -- Update debug info in Editing view
+    | EventMotion (x, y) <- event
+    , EditScreen mcard <- (screen state)
+    = state {_mouse = (x, y)}
+
+    -- Handle key presses in Text view
+    | EventKey (Char c) Down _ _ <- event
+    , TextScreen str f <- screen state
+    = state {screen = TextScreen (str ++ [c]) f}
+
+    -- Remove latest symbol on pressing Delete in Text view
+    | EventKey (SpecialKey KeyDelete) Down _ _ <- event
+    , TextScreen str f <- screen state
+    = state {screen = TextScreen (pop str) f}
+
+    -- Submit the result on pressing right arrow in Text view
+    | EventKey (SpecialKey KeyRight) Down _ _ <- event
+    , TextScreen str f <- screen state
+    = f str
+
+    --
+    -- Select view
+    --
+
+    -- Submit the result on pressing down arrow in Text view
+    | EventKey (SpecialKey KeyDown) Down _ _ <- event
+    , SelectScreen list idx f <- screen state
+    = f list idx
+
+    -- Cycle through choices on pressing right arrow
+    | EventKey (SpecialKey KeyRight) Down _ _ <- event
+    , SelectScreen list idx f <- screen state
+    , newidx <- idx + 1
+    , ((length list) > newidx)
+    = state {screen = SelectScreen list newidx f}
+
+    -- Cycle back through choices on pressing left arrow
+    | EventKey (SpecialKey KeyLeft) Down _ _ <- event
+    , SelectScreen list idx f <- screen state
+    , newidx <- idx - 1
+    , (newidx >= 0)
+    = state {screen = SelectScreen list newidx f}
 
     | otherwise = state
+    
 {-
 handleEvent (EventMotion (x,y)) (AppState cards Nothing Nothing _ _ _) = AppState cards Nothing Nothing (x,y) coln (findCardByCoords coln col x y)
   where
@@ -173,4 +279,10 @@ run = play window background 1 defaultState drawApp handleEvent updateApp
       window = InWindow "Kanban Board" (1200, 700) (0, 0) 
       background = white 
       --drawing = Polygon [(0,0), (0,160), (80,160), (80,0)]
-      defaultState = AppState [[(Card "Test Card 1" 0 Medium), (Card "Test Card 2" 0 Medium)], [(Card "Test Card 3" 0 Medium), (Card "Test Card 4" 0 Medium)], [(Card "Test Card 5" 0 Medium)]] Nothing Nothing Nothing (0,0) Nothing Nothing
+      defaultState = AppState {
+        cards = [[(Card "Test Card 1" 0 Medium), (Card "Test Card 2" 0 Medium)], [(Card "Test Card 3" 0 Medium), (Card "Test Card 4" 0 Medium)], [(Card "Test Card 5" 0 Medium)]]
+        , screen = None
+        , _mouse = (0,0)
+        , _column = Nothing
+        , _card = Nothing
+      }
