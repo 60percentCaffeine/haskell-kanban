@@ -1,6 +1,6 @@
 module Main where
 
-import TaskBot
+import KanbanMain
 
 main :: IO ()
 main = run

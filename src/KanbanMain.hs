@@ -1,4 +1,4 @@
-module TaskBot
+module KanbanMain
   ( run
   ) where
 
