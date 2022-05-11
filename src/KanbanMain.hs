@@ -7,6 +7,7 @@ import Graphics.Gloss.Interface.Pure.Game
 import Consts
 import Types
 import Funcs
+--import DatabaseModule
 
 debugColumn :: Column -> String
 debugColumn Nothing = "Nothing"
@@ -149,11 +150,11 @@ drawApp state
   | ListUpdateScreen list idx _ <- stateScreen state
   = translate (leftSide + 20) (300)
   $ Pictures [
-    Scale textScale textScale $ Text "Select a value:",
+    Scale textScale textScale $ Text listUpdateScreenTip,
     translate 400 0 $ Scale textScale textScale $ Text (showListValue list idx),
-    translate 0 (-50) $ Scale textScale textScale $ Text "Use left/right arrows to pick, D to delete, E to edit",
-    translate 0 (-100) $ Scale textScale textScale $ Text "Press A to add a new entry",
-    translate 0 (-150) $ Scale textScale textScale $ Text "Press Q to save&quit"
+    translate 0 (-50) $ Scale textScale textScale $ Text listUpdateScreenPickTip,
+    translate 0 (-100) $ Scale textScale textScale $ Text listUpdateScreenAddTip,
+    translate 0 (-150) $ Scale textScale textScale $ Text listUpdateScreenQuitTip
   ]
   
   | otherwise

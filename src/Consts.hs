@@ -42,3 +42,9 @@ textInputControlsTip = "Delete to remove last letter, right arrow to submit"
 selectScreenTip, selectScreenControlsTip :: String
 selectScreenTip = "Pick the new value:"
 selectScreenControlsTip = "Use left/right arrows to pick, down arrow to submit"
+
+listUpdateScreenTip, listUpdateScreenPickTip, listUpdateScreenAddTip, listUpdateScreenQuitTip :: String
+listUpdateScreenTip = "Select a value:"
+listUpdateScreenPickTip = "Use left/right arrows to pick, D to delete, E to edit"
+listUpdateScreenAddTip = "Press A to add a new entry"
+listUpdateScreenQuitTip = "Press Q to save & quit"
