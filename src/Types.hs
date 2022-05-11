@@ -4,7 +4,8 @@ module Types where
 --data CardPriority = Highest | High | Medium | Low | Lowest
 data Card = Card {
   cardTitle :: String,
-  cardWorker :: Int
+  cardWorker :: Int,
+  cardTags :: [String]
 }
 
 {-
@@ -18,7 +19,7 @@ instance Eq CardPriority where
 -}
 
 instance Eq Card where
-  Card x1 y1 == Card x2 y2 = (x1 == x2) && (y1 == y2)
+  Card x1 y1 z1 == Card x2 y2 z2 = (x1 == x2) && (y1 == y2) && (z1 == z2)
 
 type Column = Maybe Int
 
@@ -38,10 +39,16 @@ data AppScreen =
   | MoveScreen MovingCard
   | TextScreen String (String -> AppState)
   | SelectScreen [String] Int ([String] -> Int -> AppState)
+  | ListUpdateScreen [String] Int (AppState -> [String] -> AppState)
+
+listUpdateScreenGetList :: AppScreen -> [String]
+listUpdateScreenGetList (ListUpdateScreen l _ _) = l
+listUpdateScreenGetList _ = []
 
 data AppState = AppState {
   stateCards :: [[Card]],
   stateScreen :: AppScreen,
+  stateUsers :: [String],
   _mouse :: (Float, Float),
   _column :: Column,
   _card :: Maybe Card

@@ -4,8 +4,8 @@ columnAmount :: Int
 columnAmount = 3
 
 -- it might be better to have a dedicated User type
-users :: [String]
-users = ["Undefined", "Bob", "Alice", "John", "Valera"]
+defaultUserList :: [String]
+defaultUserList = ["Undefined", "Bob", "Alice", "John", "Valera"]
 
 width, height, topSide, leftSide, textScale :: Float
 width = 1200
@@ -23,6 +23,11 @@ editCardWorkerFieldXStart, editCardWorkerFieldYStart, editCardWorkerFieldYEnd ::
 editCardWorkerFieldXStart = leftSide + 20
 editCardWorkerFieldYStart = topSide - 110
 editCardWorkerFieldYEnd = topSide - 70
+
+editCardTagsFieldXStart, editCardTagsFieldYStart, editCardTagsFieldYEnd :: Float
+editCardTagsFieldXStart = leftSide + 20
+editCardTagsFieldYStart = topSide - 150
+editCardTagsFieldYEnd = topSide - 120
 
 editCardNameTip, editCardPersonTip, editCardExitTip, editCardRemoveTip :: String
 editCardNameTip = "Name:"

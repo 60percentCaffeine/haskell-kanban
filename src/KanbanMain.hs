@@ -26,17 +26,19 @@ debugInfo (x,y) col currentCard currentMoving = Text ("mouse coords: (" ++ (show
   ", card:" ++ (debugCard currentCard) ++
   ", moving:" ++ (debugMovingCard currentMoving))
 
-data EditField = NameField | WorkerField
+data EditField = NameField | WorkerField | TagsField
 
 debugField :: Maybe EditField -> String
 debugField Nothing = "Nothing"
 debugField (Just NameField) = "NameField"
 debugField (Just WorkerField) = "WorkerField"
+debugField (Just TagsField) = "TagsField"
 
 detectEditField :: Float -> Float -> Maybe EditField
 detectEditField x y
   | ((x > editCardNameFieldXStart) && (y < editCardNameFieldYEnd) && (y > editCardNameFieldYStart)) = Just NameField
   | ((x > editCardWorkerFieldXStart) && (y < editCardWorkerFieldYEnd) && (y > editCardWorkerFieldYStart)) = Just WorkerField
+  | ((x > editCardTagsFieldXStart) && (y < editCardTagsFieldYEnd) && (y > editCardTagsFieldYStart)) = Just TagsField
   | otherwise = Nothing
 
 updateNameField :: AppState -> String -> AppState
@@ -58,6 +60,16 @@ updateWorkerField state _ idx
 
   | otherwise = state
 
+updateTagList :: AppScreen -> AppState -> [String] -> AppState
+updateTagList screen state tags
+  | EditScreen mcard <- screen = let
+      card = movingCard mcard
+      card2 = card {cardTags = tags}
+      mcard2 = mcard {movingCard = card2}
+    in state {stateScreen = (EditScreen mcard2)}
+
+  | otherwise = state
+
 handleEditClick :: AppState -> Float -> Float -> AppState
 handleEditClick state x y
   | Just NameField <- field
@@ -67,12 +79,26 @@ handleEditClick state x y
   | Just WorkerField <- field
   , Just mcard <- editing state
   , card <- movingCard mcard
-  = startSelectScreen state users (cardWorker card) updateWorkerField
+  = startSelectScreen state (stateUsers state) (cardWorker card) updateWorkerField
+
+  | Just TagsField <- field
+  , Just mcard <- editing state
+  , card <- movingCard mcard
+  = state {stateScreen = ListUpdateScreen (cardTags card) 0 (updateTagList $ stateScreen state)}
 
   | Nothing <- field = state
 
   where field = detectEditField x y
 handleEditClick state _ _ = state
+
+showCardTags :: [String] -> String
+showCardTags [] = []
+showCardTags (a: az) = a ++ " " ++ (showCardTags az)
+
+showListValue :: [String] -> Int -> String
+showListValue list n
+  | (length list == 0) = ""
+  | otherwise = list !! n
 
 -- if the currently edited card is Nothing, draw the board
 -- else draw the card editing interface
@@ -87,11 +113,15 @@ drawApp state
 
     -- draw worker
     translate 0 (-50) $ Scale textScale textScale $ Text editCardPersonTip,
-    translate 100 (-50) $ Scale textScale textScale $ Text (users !! (cardWorker $ movingCard edi)),
+    translate 100 (-50) $ Scale textScale textScale $ Text ((stateUsers state) !! (cardWorker $ movingCard edi)),
+
+    -- draw tags
+    translate 0 (-100) $ Scale textScale textScale $ Text "Tags:",
+    translate 100 (-100) $ Scale textScale textScale $ Text $ showCardTags $ cardTags $ movingCard edi,
 
     -- save/remove card message
-    translate 0 (-100) $ Scale textScale textScale $ Text editCardExitTip,
-    translate 0 (-150) $ Scale textScale textScale $ Text editCardRemoveTip,
+    translate 0 (-150) $ Scale textScale textScale $ Text editCardExitTip,
+    translate 0 (-200) $ Scale textScale textScale $ Text editCardRemoveTip,
 
     -- draw debug info
     translate (-20) (-height + 60) $ Scale textScale textScale $ Color red
@@ -114,6 +144,16 @@ drawApp state
     Scale textScale textScale $ Text selectScreenTip,
     translate 400 0 $ Scale textScale textScale $ Text (list !! idx),
     translate 0 (-50) $ Scale textScale textScale $ Text selectScreenControlsTip
+  ]
+
+  | ListUpdateScreen list idx _ <- stateScreen state
+  = translate (leftSide + 20) (300)
+  $ Pictures [
+    Scale textScale textScale $ Text "Select a value:",
+    translate 400 0 $ Scale textScale textScale $ Text (showListValue list idx),
+    translate 0 (-50) $ Scale textScale textScale $ Text "Use left/right arrows to pick, D to delete, E to edit",
+    translate 0 (-100) $ Scale textScale textScale $ Text "Press A to add a new entry",
+    translate 0 (-150) $ Scale textScale textScale $ Text "Press Q to save&quit"
   ]
   
   | otherwise
@@ -153,7 +193,7 @@ startCreatingCard :: AppState -> Int -> Float -> Float -> AppState
 startCreatingCard state coln x y = state {stateScreen =
   (EditScreen $ MovingCard newcard (x,y) coln (length $ (stateCards state !! coln)))}
 
-  where newcard = Card "New Card" 0
+  where newcard = Card "New Card" 0 []
 
 -- starts a text screen
 -- the textscreenfunc modifies the state BEFORE the text screen started
@@ -163,6 +203,27 @@ startTextScreen state str f = state {stateScreen = TextScreen str (f state)}
 
 startSelectScreen :: AppState -> [String] -> Int -> SelectScreenFunc -> AppState
 startSelectScreen state list idx f = state {stateScreen = SelectScreen list idx (f state)}
+
+updateUserList :: AppScreen -> AppState -> [String] -> AppState
+updateUserList screen state users = state {stateScreen = screen, stateUsers = ("Undefined": users)}
+
+updateListElement :: AppState -> String -> AppState
+updateListElement state name
+  | ListUpdateScreen list idx f <- stateScreen state
+    = state {stateScreen = ListUpdateScreen (replaceAt list idx name) idx f}
+
+  | otherwise = state
+
+removeWorkerFromColumn :: [Card] -> Int -> [Card]
+removeWorkerFromColumn [] _ = []
+removeWorkerFromColumn (a: az) n
+  | (cardWorker a == n) = (a {cardWorker = 0}: removeWorkerFromColumn az n)
+  | (cardWorker a > n) = (a {cardWorker = ((cardWorker a) - 1)}: removeWorkerFromColumn az n)
+  | otherwise = (a: removeWorkerFromColumn az n)
+
+removeWorker :: [[Card]] -> Int -> [[Card]]
+removeWorker [] _ = []
+removeWorker (a: az) n = (removeWorkerFromColumn a n: removeWorker az n)
 
 -- Handle events.
 -- Handle mouse clicks on cards (start editing the card)
@@ -193,7 +254,7 @@ handleEvent event state
 
     -- Stop moving the card
     | EventKey (MouseButton LeftButton) Up _ (x, y) <- event
-    , AppState cards (MoveScreen mov) _ _ _ <- state
+    , AppState cards (MoveScreen mov) _ _ _ _ <- state
     , Just coln <- (findColumnByCoords 0 x y)
     , cardn <- (findCardIndexByCoords (Just coln) (Just $ cards !! coln) x y 0)
     = state {stateCards = (addCardTo cards coln cardn (movingCard mov)), stateScreen = None}
@@ -204,13 +265,18 @@ handleEvent event state
     , ((isNothing $ editing state) && (isNothing $ moving state))
     = newState
 
+    -- Start editing the personnel list on M
+    | EventKey (Char 'm') Down _ _ <- event
+    , None <- (stateScreen state)
+    = state {stateScreen = ListUpdateScreen (tail $ stateUsers state) 0 (updateUserList None)}
+
     --
     -- Editing view
     --
 
     -- Stop editing on Q
     | EventKey (Char 'q') Down _ _ <- event
-    , AppState cards (EditScreen edi) _ _ _ <- state
+    , AppState cards (EditScreen edi) _ _ _ _ <- state
     = state {
       stateCards = (addCardTo cards (movingPrevCol edi) (Just $ movingPrevPos edi) (movingCard edi)), 
       stateScreen = None
@@ -218,7 +284,7 @@ handleEvent event state
 
     -- Remove card on D
     | EventKey (Char 'd') Down _ _ <- event
-    , AppState _ (EditScreen _) _ _ _ <- state
+    , AppState _ (EditScreen _) _ _ _ _ <- state
     = state {stateScreen = None}
 
     -- Handle mouse clicks in editing view
@@ -279,6 +345,48 @@ handleEvent event state
     , (newidx >= 0)
     = state {stateScreen = SelectScreen list newidx f}
 
+    --
+    -- List update view
+    --
+
+    -- Cycle through choices on pressing right arrow
+    | EventKey (SpecialKey KeyRight) Down _ _ <- event
+    , ListUpdateScreen list idx f <- stateScreen state
+    , newidx <- idx + 1
+    , ((length list) > newidx)
+    = state {stateScreen = ListUpdateScreen list newidx f}
+
+    -- Cycle back through choices on pressing left arrow
+    | EventKey (SpecialKey KeyLeft) Down _ _ <- event
+    , ListUpdateScreen list idx f <- stateScreen state
+    , newidx <- idx - 1
+    , (newidx >= 0)
+    = state {stateScreen = ListUpdateScreen list newidx f}
+
+    -- Remove element from the list on D
+    | EventKey (Char 'd') Down _ _ <- event
+    , ListUpdateScreen list idx f <- stateScreen state
+    , cards <- stateCards state
+    = state {
+      stateScreen = ListUpdateScreen (deleteAt list idx) 0 f,
+      stateCards = removeWorker cards (idx + 1)
+    }
+
+    -- Edit element on E
+    | EventKey (Char 'e') Down _ _ <- event
+    , ListUpdateScreen list idx _ <- stateScreen state
+    = startTextScreen state (list !! idx) updateListElement
+
+    -- Add new element on A
+    | EventKey (Char 'a') Down _ _ <- event
+    , ListUpdateScreen list _ f <- stateScreen state
+    = state {stateScreen = ListUpdateScreen (list ++ ["New Element"]) (length list) f}
+
+    -- Quit&save on Q
+    | EventKey (Char 'q') Down _ _ <- event
+    , ListUpdateScreen list _ f <- stateScreen state
+    = f state list
+
     | otherwise = state
 
 -- simulation step
@@ -294,11 +402,12 @@ run = play window background 1 defaultState drawApp handleEvent updateApp
       --drawing = Polygon [(0,0), (0,160), (80,160), (80,0)]
       defaultState = AppState {
         stateCards = [
-          [(Card "Test Card 1" 0), (Card "Test Card 2" 0)],
-          [(Card "Test Card 3" 0), (Card "Test Card 4" 0)],
-          [(Card "Test Card 5" 0)]
+          [(Card "Test Card 1" 0 []), (Card "Test Card 2" 0 [])],
+          [(Card "Test Card 3" 0 []), (Card "Test Card 4" 0 [])],
+          [(Card "Test Card 5" 0 [])]
         ]
         , stateScreen = None
+        , stateUsers = defaultUserList
         , _mouse = (0,0)
         , _column = Nothing
         , _card = Nothing

@@ -12,6 +12,16 @@ delete _ [] = []
 delete el (x: xz) | (x == el) = xz
   | otherwise = (x: (delete el xz))
 
+deleteAt :: [a] -> Int -> [a]
+deleteAt [] _ = []
+deleteAt (_: az) 0 = az
+deleteAt (a: az) n = (a: deleteAt az (n-1))
+
+replaceAt :: [a] -> Int -> a -> [a]
+replaceAt [] _ _ = []
+replaceAt (_: az) 0 el = (el: az)
+replaceAt (a: az) n el = (a: replaceAt az (n-1) el)
+
 pop :: [a] -> [a]
 pop [] = []
 pop [_] = []
