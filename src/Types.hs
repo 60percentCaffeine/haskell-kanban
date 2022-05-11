@@ -1,13 +1,13 @@
 module Types where
 
 -- TODO: struct
-data CardPriority = Highest | High | Medium | Low | Lowest
+--data CardPriority = Highest | High | Medium | Low | Lowest
 data Card = Card {
-  title :: String,
-  worker :: Int,
-  priority :: CardPriority
+  cardTitle :: String,
+  cardWorker :: Int
 }
 
+{-
 instance Eq CardPriority where
   (==) Highest Highest = True
   (==) High High = True
@@ -15,9 +15,10 @@ instance Eq CardPriority where
   (==) Low Low = True
   (==) Lowest Lowest = True
   (==) _ _ = False
+-}
 
 instance Eq Card where
-  Card x1 y1 z1 == Card x2 y2 z2 = (x1 == x2) && (y1 == y2) && (z1 == z2)
+  Card x1 y1 == Card x2 y2 = (x1 == x2) && (y1 == y2)
 
 type Column = Maybe Int
 
@@ -39,8 +40,8 @@ data AppScreen =
   | SelectScreen [String] Int ([String] -> Int -> AppState)
 
 data AppState = AppState {
-  cards :: [[Card]],
-  screen :: AppScreen,
+  stateCards :: [[Card]],
+  stateScreen :: AppScreen,
   _mouse :: (Float, Float),
   _column :: Column,
   _card :: Maybe Card
@@ -48,10 +49,10 @@ data AppState = AppState {
 
 editing :: AppState -> Maybe MovingCard
 editing state
-  | (EditScreen mcard) <- (screen state) = Just mcard
+  | (EditScreen mcard) <- (stateScreen state) = Just mcard
   | otherwise = Nothing
 
 moving :: AppState -> Maybe MovingCard
 moving state
-  | (MoveScreen mcard) <- (screen state) = Just mcard
+  | (MoveScreen mcard) <- (stateScreen state) = Just mcard
   | otherwise = Nothing
