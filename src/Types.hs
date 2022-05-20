@@ -3,6 +3,7 @@ module Types where
 -- TODO: struct
 --data CardPriority = Highest | High | Medium | Low | Lowest
 data Card = Card {
+  cardId :: Maybe Int,
   cardTitle :: String,
   cardWorker :: Int,
   cardTags :: [String]
@@ -19,7 +20,7 @@ instance Eq CardPriority where
 -}
 
 instance Eq Card where
-  Card x1 y1 z1 == Card x2 y2 z2 = (x1 == x2) && (y1 == y2) && (z1 == z2)
+  Card x1 y1 z1 _ == Card x2 y2 z2 _ = (x1 == x2) && (y1 == y2) && (z1 == z2)
 
 type Column = Maybe Int
 

@@ -7,7 +7,7 @@ import Graphics.Gloss.Interface.Pure.Game
 import Consts
 import Types
 import Funcs
---import DatabaseModule
+import DatabaseModule()
 
 debugColumn :: Column -> String
 debugColumn Nothing = "Nothing"
@@ -194,7 +194,7 @@ startCreatingCard :: AppState -> Int -> Float -> Float -> AppState
 startCreatingCard state coln x y = state {stateScreen =
   (EditScreen $ MovingCard newcard (x,y) coln (length $ (stateCards state !! coln)))}
 
-  where newcard = Card "New Card" 0 []
+  where newcard = Card Nothing "New Card" 0 []
 
 -- starts a text screen
 -- the textscreenfunc modifies the state BEFORE the text screen started
@@ -403,9 +403,9 @@ run = play window background 1 defaultState drawApp handleEvent updateApp
       --drawing = Polygon [(0,0), (0,160), (80,160), (80,0)]
       defaultState = AppState {
         stateCards = [
-          [(Card "Test Card 1" 0 []), (Card "Test Card 2" 0 [])],
-          [(Card "Test Card 3" 0 []), (Card "Test Card 4" 0 [])],
-          [(Card "Test Card 5" 0 [])]
+          [(Card Nothing "Test Card 1" 0 []), (Card Nothing "Test Card 2" 0 [])],
+          [(Card Nothing "Test Card 3" 0 []), (Card Nothing "Test Card 4" 0 [])],
+          [(Card Nothing "Test Card 5" 0 [])]
         ]
         , stateScreen = None
         , stateUsers = defaultUserList
