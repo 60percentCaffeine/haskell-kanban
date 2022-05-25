@@ -238,16 +238,6 @@ instance Show BDRes where
 
 
 
-{--------Error processing --------}
-
-giveerror ::BDRes
-
-giveerror = BDResErr "error occured"
-
-
-
-
-
 
 
 
@@ -267,6 +257,24 @@ handler ex = return (BDResErr ( "Caught exception: " ++ show ex ))
 
 
 
+
+{-handler for add_card_to_db-}
+
+handler_add_card_to_db :: SomeException -> IO ( BDRes )
+
+handler_add_card_to_db ex = do 
+
+    Prelude.putStrLn  "-----------------------------------------------\n\
+
+        \Error occured in add_card_to_db. Possible reasons are:\
+
+        \bad connection or inconsistent data like non-existent foreign key: \
+
+        \worker id. The error from postgres is the following: \n \
+
+        \------------------------------------------------------------\n"
+
+    return (BDResErr ( "Caught exception: " ++ show ex ))
 
 
 
@@ -316,7 +324,7 @@ add_card_to_db   x_title x_worker_id x_column x_kanban = do
 
         \the key exists" )                          )           
 
-      handler
+      handler_add_card_to_db
 
 
 
@@ -330,7 +338,9 @@ add_card_to_db   x_title x_worker_id x_column x_kanban = do
 
 {----------------------update_card_in_db----------------------}
 
---arguments: card_id, parameters, returns number of card
+{-arguments: card_id, parameters, 
+
+    returns: number of card -}
 
 update_card_in_db :: Int -> String -> Int -> Int -> Int ->  IO ( BDRes )
 
@@ -470,7 +480,7 @@ concat_arr (x: xz) = x ++ concat_arr xz
 
 
 
-{----------------------gets all names of employees ---------------------}
+{----gets all names of employees, returns it as list of strings---}
 
 load_users_from_db :: IO [String]
 
@@ -492,7 +502,9 @@ load_users_from_db = do
 
 
 
-      x:: [[String]] <- query_ conn "SELECT employee_fullname FROM employee ORDER BY employee_id ;  "
+      x:: [[String]] <- query_ conn "SELECT employee_fullname FROM\
+
+      \ employee ORDER BY employee_id ;  "
 
 
 
@@ -522,9 +534,13 @@ handler_str_undef ex = return $ show ex
 
 
 
-get_user_FIO_by_employee_ID :: Int ->  IO ( String )
 
-get_user_FIO_by_employee_ID _employee_id = catch ( do
+
+{-gets user fullname by employee id-}
+
+get_user_FULLNAME_by_employee_ID :: Int ->  IO ( String )
+
+get_user_FULLNAME_by_employee_ID _employee_id = catch ( do
 
   str <- get_BDConfig
 
@@ -540,7 +556,9 @@ get_user_FIO_by_employee_ID _employee_id = catch ( do
 
 
 
-      card_records::[[String]] <- query conn "SELECT employee_fullname from employee WHERE employee_id = ? ;  "
+      card_records::[[String]] <- query conn "SELECT employee_fullname\
+
+      \ from employee WHERE employee_id = ? ;  "
 
        (Only _employee_id) 
 
@@ -559,6 +577,12 @@ get_user_FIO_by_employee_ID _employee_id = catch ( do
 
 
 
+
+
+
+{-updates user in db. args: employee id, new employee name, 
+
+                   returns: employee_id  -}
 
 update_user_in_db :: Int -> String ->  IO ( BDRes )
 
@@ -595,6 +619,12 @@ update_user_in_db _employee_id _new_name = catch ( do
 
 
 
+
+
+
+{-adds user to db. args: new employee name, 
+
+                returns: new employee`s id -}
 
 add_user_to_db :: String ->  IO ( BDRes )
 
